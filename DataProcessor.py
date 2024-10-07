@@ -125,7 +125,7 @@ class DataProcessor:
 
 
 if __name__ == "__main__":
-    # processes the data and displays the plot
+    # Processes the data and displays the plot
     data = DataProcessor()
     data.get_data()
     data.process()
