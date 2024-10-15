@@ -1,7 +1,6 @@
-from huggingface_hub import HfApi
+from Models import *
 
-api = HfApi()
-
-model_card = api.model_info(repo_id="bert-base-uncased")
-
-dataset_card = api.dataset_info(repo_id="bert-base-uncased")
+md = Models()
+md.get_models(limit=10000, full=True)
+md.filter_date()
+md.filter_empty()
