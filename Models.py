@@ -8,6 +8,7 @@ class Models:
     """
     this class pulls the models from huggingface API and processes them
     """
+
     def __init__(self):
         """
         init method
@@ -56,3 +57,10 @@ class Models:
 
         self.models = [model for model, result in zip(self.models, results) if result is not None]
         print("%s models have data cards" % len(self.models))
+
+
+if __name__ == "__main__":
+    md = Models()
+    md.get_models(limit=10000, full=True)
+    md.filter_date()
+    md.filter_empty()
