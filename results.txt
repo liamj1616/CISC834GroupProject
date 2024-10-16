@@ -1,0 +1,37 @@
+
+
+fetched 500 models
+
+ALL MODELS RETRIEVED (after date + category filter):
+ ['Qwen/Qwen2.5-1.5B-Instruct', 'meta-llama/Llama-3.2-3B-Instruct', 'meta-llama/Llama-3.2-1B-Instruct', 'meta-llama/Llama-3.2-1B', 
+ 'Qwen/Qwen2.5-3B-Instruct', 'Qwen/Qwen2.5-72B-Instruct', 'Qwen/Qwen2.5-0.5B-Instruct', 'Qwen/Qwen2.5-7B-Instruct', 
+ 'lmms-lab/llava-onevision-qwen2-7b-ov-chat', 'unsloth/Llama-3.2-3B-Instruct-bnb-4bit', 'Qwen/Qwen2.5-0.5B', 'meta-llama/Llama-3.2-3B', 
+ 'Qwen/Qwen2.5-14B-Instruct', 'MaziyarPanahi/Llama-3.2-3B-Instruct-GGUF', 'Qwen/Qwen2.5-Coder-7B-Instruct', 
+ 'MaziyarPanahi/Llama-3.2-1B-Instruct-GGUF', 'modularai/llama-3.1', 'Qwen/Qwen2.5-32B-Instruct', 'bartowski/Llama-3.2-3B-Instruct-GGUF', 
+ 'Qwen/Qwen2.5-Math-7B-Instruct', 'unsloth/Llama-3.2-1B-Instruct-bnb-4bit', 'lmms-lab/LLaVA-Video-7B-Qwen2', 
+ 'hugging-quants/Llama-3.2-3B-Instruct-Q8_0-GGUF', 'nvidia/Llama-3_1-Nemotron-51B-Instruct', 'distributed/optimized-gpt2-250m-v0.1.2', 
+ 'allenai/Molmo-7B-D-0924', 'Qwen/Qwen2.5-14B-Instruct-AWQ', 'deepseek-ai/DeepSeek-V2.5', 'Qwen/Qwen2.5-3B', 
+ 'pavan01729/Merged_axolotl_llama3.1_GPT_Ai_5.0', 'Qwen/Qwen2.5-7B', 'Qwen/Qwen2.5-1.5B', 'bartowski/Qwen2.5-32B-Instruct-GGUF', 
+ 'bartowski/Llama-3.2-1B-Instruct-GGUF', 'Epiculous/Violet_Twilight-v0.2-GGUF', 'unsloth/Llama-3.2-3B-Instruct', 
+ 'lmms-lab/llava-onevision-qwen2-72b-ov-chat', 'unsloth/Llama-3.2-1B-bnb-4bit', 'Vikhrmodels/Vikhr-Nemo-12B-Instruct-R-21-09-24', 
+ 'unsloth/Llama-3.2-3B-bnb-4bit', 'bartowski/Qwen2.5-Math-7B-Instruct-GGUF', 'hugging-quants/Llama-3.2-1B-Instruct-Q8_0-GGUF', 
+ 'unsloth/Llama-3.2-1B-Instruct', 'neuralmagic/Llama-3.2-11B-Vision-Instruct-FP8-dynamic', 'bartowski/Mistral-Small-Instruct-2409-GGUF', 
+ 'unsloth/Qwen2.5-7B-Instruct-bnb-4bit', 'bartowski/Qwen2.5-14B-Instruct-GGUF', 'lmstudio-community/Llama-3.2-3B-Instruct-GGUF', 
+ 'Qwen/Qwen2.5-Coder-7B', 'Qwen/Qwen2.5-14B', 'Qwen/Qwen2.5-72B-Instruct-AWQ', 'mattshumer/Reflection-Llama-3.1-70B', 
+ 'Qwen/Qwen2.5-Coder-7B-Instruct-GGUF', 'lmstudio-community/Llama-3.2-1B-Instruct-GGUF', 'unsloth/Qwen2.5-7B-Instruct', 
+ 'bartowski/Reflection-Llama-3.1-70B-GGUF', 'THUDM/cogvlm2-llama3-caption']
+
+Section Tally:
+
+Model Details: 3
+Training Data: 7
+Intended Use: 6
+Evaluation Data: 0
+Versioning: 0
+Acknowledgements: 0
+Citation Details: 0
+Domain Specific: 0
+Metrics: 2
+General Data: 0
+Ethical Considerations: 6
+Caveats And Recommendations: 0
