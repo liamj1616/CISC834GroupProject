@@ -21,6 +21,7 @@ class Models:
         """
         self.api = HfApi()
         self.models = []
+        self.model_by_time = []
         self.models_filtered = []
         warnings.filterwarnings("ignore", message="Invalid model-index")
         warnings.filterwarnings("ignore", message=".*HF_HUB_DISABLE_SYMLINKS_WARNING.*")
@@ -43,19 +44,40 @@ class Models:
             for model in models:
                 file.write(json.dumps(model) + '\n')
 
-    # def get_models_time(self, limit=10000, full=True):
-    #     start_date = datetime(2022, 9, 1, tzinfo=timezone.utc)
-    #     end_date = datetime(2024, 8, 31, tzinfo=timezone.utc)
-    #     i = 0
-    #     while len(self.models) < limit:
-    #         i += 1
-    #         models = list(self.api.list_models(sort="createdAt", page, direction=-1, full=full, pagesize=100))
-    #         print(len(models))
-    #         print(parser.isoparse(str(models[0].createdAt)))
-    #         if start_date <= parser.isoparse(str(models[0].createdAt)) <= end_date:
-    #             for model in models:
-    #                 self.models.append(model)
-    #     print("fetched %s models" % len(self.models))
+    def read_file(self, start_line, end_line):
+        result = []
+        with open("model_names.json", 'r') as file:
+            for line_num, line in enumerate(file, start=1):
+                if start_line <= line_num <= end_line:
+                    data = json.loads(line.strip())
+                    result.append(list(data))
+                elif line_num > end_line:
+                    return result
+
+    def get_models_from_time(self, limit):
+        start_date = datetime(2022, 9, 1, tzinfo=timezone.utc)
+        end_date = datetime(2024, 8, 31, tzinfo=timezone.utc)
+        page = 0
+        page_size = 1000
+        while len(self.model_by_time) < limit:
+            start_line = page * page_size
+            end_line = (page + 1) * page_size
+            page += 1
+            models = self.read_file(start_line, end_line)
+            if start_date <= parser.isoparse(models[0][1]) <= end_date:
+                for model in models:
+                    self.model_by_time.append(model)
+            elif start_date >= parser.isoparse(models[0][1]):
+                break
+
+    def write_time_filtered_models(self):
+        models = []
+        for model in self.model_by_time:
+            models.append(model[0])
+        self.model_by_time = models
+        with open('model_filtered_time.json', 'w') as file:
+            for model in models:
+                file.write(json.dumps(model) + '\n')
 
     def filter_date(self):
         """
@@ -119,8 +141,10 @@ class Models:
 
 if __name__ == "__main__":
     md = Models()
-    md.get_models(limit=1000, full=True)
-    md.write_models()
+    md.get_models_from_time(9999999)
+    md.write_time_filtered_models()
+    # md.get_models(limit=1000, full=True)
+    # md.write_models()
     # md.filter_date()
     # md.get_models_time(limit=55300)
     # md.filter_empty()
