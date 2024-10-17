@@ -16,6 +16,7 @@ class Models:
         self.api = HfApi()
         self.models = None
         warnings.filterwarnings("ignore", message="Invalid model-index")
+        warnings.filterwarnings("ignore", message=".*HF_HUB_DISABLE_SYMLINKS_WARNING.*")
 
     def get_models(self, limit=1000000, full=True):
         """
@@ -43,9 +44,12 @@ class Models:
         you need model info to filter if the model data card exists
         this method gets the model info given model id
         """
-        model_info = self.api.model_info(model_id)
-        if model_info.cardData is not None:
-            return model_id
+        try:
+            model_info = self.api.hf_hub_download(model_id, 'README.md')
+            print(model_info)
+            return model_info
+        except Exception as error:
+            return None
 
     def filter_empty(self):
         """
@@ -61,6 +65,6 @@ class Models:
 
 if __name__ == "__main__":
     md = Models()
-    md.get_models(limit=10000, full=True)
-    md.filter_date()
+    md.get_models(limit=100, full=True)
+    # md.filter_date()
     md.filter_empty()
