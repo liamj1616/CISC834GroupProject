@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dateutil import parser
 import os
 from huggingface_hub.utils import disable_progress_bars
-
+import random
 
 
 class Models:
@@ -69,7 +69,7 @@ class Models:
                 results = list(executor.map(self.fetch_model_info, model_ids))
                 models_filtered = [model for model, result in zip(models, results) if result is not None]
                 for models in models_filtered:
-                    self.models_filtered.append(models)
+                    self.models_filtered.append(models.id)
                 print(len(models_filtered))
                 print("%s percent done" % str((i + 1)))
                 cache_dir = os.path.expanduser("~/.cache/huggingface/hub")
@@ -83,9 +83,17 @@ class Models:
         # self.models = [model for model, result in zip(self.models, results) if result is not None]
         print("%s models have data cards" % len(self.models_filtered))
 
+    def select_400(self):
+        with open('400.txt', 'w') as file:
+            random.shuffle(self.models_filtered)
+            for i in range(0, 400):
+                file.write(str(self.models_filtered[i]) + "\n")
+        print("finished")
+
 
 if __name__ == "__main__":
     md = Models()
     md.get_models(limit=10000, full=True)
     md.filter_date()
     md.filter_empty()
+    md.select_400()
