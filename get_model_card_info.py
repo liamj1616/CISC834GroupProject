@@ -91,5 +91,5 @@ class ModelFilter:
             print(f"{section}: {count}")
 
 # Example usage
-model_filter = ModelFilter(category="text-generation", start_date="2024-09-01", end_date="2024-09-30")
+model_filter = ModelFilter(category="text-generation", start_date="2024-07-01", end_date="2024-08-1")
 model_filter.run()
