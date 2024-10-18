@@ -177,6 +177,7 @@ class Models:
                 results = list(executor.map(self.fetch_model_info, models))
                 num = len(self.models_filtered)
                 for result in results:
+                    
                     with open(str(result), 'r', encoding='utf-8') as f:
                         content = f.read().strip()
                         content = re.sub(r"---(.*?)---", "", content, flags=re.DOTALL).strip()

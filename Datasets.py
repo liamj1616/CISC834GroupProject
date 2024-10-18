@@ -32,7 +32,7 @@ class Datasets:
         Pulls datasets, with a specified limit amount of datasets.
         full=True makes filter by date possible.
         """
-        self.datasets = list(self.api.list_datasets(sort="createdAt", direction=-1, full=full))
+        self.datasets = list(self.api.list_datasets(sort="downloads", direction="-1", full=full))
         print(f"Fetched {len(self.datasets)} datasets")
 
     def write_datasets(self):
@@ -119,22 +119,13 @@ class Datasets:
             for line in file:
                 line = line.strip()  # Remove any leading/trailing whitespace
                 if line:  # Check if the line is not empty
-                    try:
-                        dataset = json.loads(line)  # Parse each line as JSON
-                        datasets.append(dataset)  # Add to the datasets list
-                    except json.JSONDecodeError as e:
-                        print(f"Error decoding JSON on line: {line}. Error: {e}")
+                    datasets.append(line)
         # Check if there are enough datasets to select from
         if len(datasets) < max:
             print(f"Error: Not enough datasets available. Found {len(datasets)} datasets.")
             return
-        # Shuffle the datasets
-        random.shuffle(datasets)
-        selected = datasets[:max]
-        # Write the selected datasets to the output file
-        # with open('selected_datasets.txt', 'w') as file:
-        #     for i in selected:
-        #         file.write(json.dumps(i) + "\n")  # Write each dataset as a JSON string
+        # randomly sample
+        selected = random.sample(datasets, max)
 
         print(f"Finished selecting {max} datasets")
         
@@ -163,12 +154,8 @@ class Datasets:
         if len(datasets) < 400:
             print(f"Error: Not enough datasets available. Found {len(datasets)} datasets.")
             return
-
-        # Shuffle the datasets
-        random.shuffle(datasets)
-
-        # Select the first 400 datasets
-        selected = datasets[:400]
+        
+        selected = random.sample(datasets, 400)
 
         # Write the selected datasets to the output file
         with open('400_datasets.txt', 'w') as file:
@@ -196,14 +183,17 @@ class Datasets:
 
 
 if __name__ == "__main__":
+    
+    #229325
+    
     ds = Datasets()
     
     # ds.get_datasets(limit=1000, full=True)
     # ds.write_datasets()
     
-    # ds.get_datasets_from_time(9999999)
-    # ds.write_time_filtered_datasets()
+    ds.get_datasets_from_time(9999999)
+    ds.write_time_filtered_datasets()
     
-    # ds.select(1000)
+    ds.select(1000)
     
     ds.select_400()
