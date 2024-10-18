@@ -8,6 +8,8 @@ from huggingface_hub.utils import disable_progress_bars
 import random
 import time
 import json
+import shutil
+import re
 
 
 class Models:
@@ -44,15 +46,16 @@ class Models:
             for model in models:
                 file.write(json.dumps(model) + '\n')
 
-    def read_file(self, start_line, end_line):
+    def read_file(self, start_line, end_line, name):
         result = []
-        with open("model_names.json", 'r') as file:
-            for line_num, line in enumerate(file, start=1):
+        with open(name, 'r') as file:
+            for line_num, line in enumerate(file, start=start_line):
                 if start_line <= line_num <= end_line:
                     data = json.loads(line.strip())
-                    result.append(list(data))
+                    result.append(data)
                 elif line_num > end_line:
                     return result
+            return result
 
     def get_models_from_time(self, limit):
         start_date = datetime(2022, 9, 1, tzinfo=timezone.utc)
@@ -63,7 +66,7 @@ class Models:
             start_line = page * page_size
             end_line = (page + 1) * page_size
             page += 1
-            models = self.read_file(start_line, end_line)
+            models = self.read_file(start_line, end_line, "model_names.json")
             if start_date <= parser.isoparse(models[0][1]) <= end_date:
                 for model in models:
                     self.model_by_time.append(model)
@@ -120,7 +123,6 @@ class Models:
                 print(len(models_filtered))
                 print("%s percent done" % str((i + 1)))
                 cache_dir = os.path.expanduser("~/.cache/huggingface/hub")
-                # os.system("huggingface-cli delete-cache")
                 if os.path.exists(cache_dir):
                     # shutil.rmtree(cache_dir)
                     print("Hugging Face cache has been cleared.")
@@ -130,6 +132,82 @@ class Models:
 
         # self.models = [model for model, result in zip(self.models, results) if result is not None]
         print("%s models have data cards" % len(self.models_filtered))
+
+    def filter_empty_from_file(self):
+        """
+        filter the models with empty datacard out
+        """
+        page = 0
+        page_size = 1000
+        while page < 814:
+            with ThreadPoolExecutor(max_workers=100) as executor:
+                start_line = page * page_size
+                end_line = (page + 1) * page_size
+                page += 1
+                models = self.read_file(start_line, end_line, "model_filtered_time.json")
+                results = list(executor.map(self.fetch_model_info, models))
+
+                models_filtered = [model for model, result in zip(models, results) if result is not None]
+                for model in models_filtered:
+                    self.models_filtered.append(model)
+                if len(models_filtered) == 0:
+                    print("RATE LIMIT")
+                cache_dir = os.path.expanduser("~/.cache/huggingface/hub")
+                if os.path.exists(cache_dir):
+                    shutil.rmtree(cache_dir)
+                    print("page:", page)
+                    print("Hugging Face cache has been cleared.")
+                else:
+                    print("Hugging Face cache directory does not exist.")
+                time.sleep(3)
+
+    def filter_empty_card_from_file(self, threshold=100):
+        """
+        filter the models with empty datacard out
+        """
+        page = 0
+        page_size = 1000
+        count = 0
+        while page < 612:
+            with ThreadPoolExecutor(max_workers=100) as executor:
+                start_line = page * page_size
+                end_line = (page + 1) * page_size
+                page += 1
+                models = self.read_file(start_line, end_line, "model_with_card.json")
+                results = list(executor.map(self.fetch_model_info, models))
+                num = len(self.models_filtered)
+                for result in results:
+                    with open(str(result), 'r', encoding='utf-8') as f:
+                        content = f.read().strip()
+                        content = re.sub(r"---(.*?)---", "", content, flags=re.DOTALL).strip()
+                        if content:
+                            match = re.search(r"models--(.*?)\\", result)
+                            if match:
+                                self.models_filtered.append(match.group(1).replace("--", "/"))
+                            if len(content) < threshold:
+                                count += 1
+
+                if len(self.models_filtered) == num:
+                    print("RATE LIMIT")
+                cache_dir = os.path.expanduser("~/.cache/huggingface/hub")
+                if os.path.exists(cache_dir):
+                    shutil.rmtree(cache_dir)
+                    print("page:", page)
+                    print("Hugging Face cache has been cleared.")
+                else:
+                    print("Hugging Face cache directory does not exist.")
+                time.sleep(3)
+        return count
+
+    def write_model_non_empty_cards(self):
+        with open('model_with_non_empty_card.json', 'w') as file:
+            for model in self.models_filtered:
+                file.write(json.dumps(model) + '\n')
+
+    def write_model_cards(self):
+        with open('model_with_card.json', 'w') as file:
+            for model in self.models_filtered:
+                file.write(json.dumps(model) + '\n')
 
     def select_400(self):
         with open('400.txt', 'w') as file:
@@ -141,10 +219,10 @@ class Models:
 
 if __name__ == "__main__":
     md = Models()
-    md.get_models_from_time(9999999)
-    md.write_time_filtered_models()
-    # md.get_models(limit=1000, full=True)
-    # md.write_models()
-    # md.filter_date()
-    # md.get_models_time(limit=55300)
-    # md.filter_empty()
+    cache_dir = os.path.expanduser("~/.cache/huggingface/hub")
+    if os.path.exists(cache_dir):
+        shutil.rmtree(cache_dir)
+    count = md.filter_empty_card_from_file()
+    md.write_model_non_empty_cards()
+    print(count, "models have a non empty model card with less than 100 characters")
+    # print(sum(1 for line in open('model_with_card.json')))
