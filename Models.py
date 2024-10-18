@@ -177,15 +177,16 @@ class Models:
                 results = list(executor.map(self.fetch_model_info, models))
                 num = len(self.models_filtered)
                 for result in results:
-                    with open(str(result), 'r', encoding='utf-8') as f:
-                        content = f.read().strip()
-                        content = re.sub(r"---(.*?)---", "", content, flags=re.DOTALL).strip()
-                        if content:
-                            match = re.search(r"models--(.*?)\\", result)
-                            if match:
-                                self.models_filtered.append(match.group(1).replace("--", "/"))
-                            if len(content) < threshold:
-                                count += 1
+                    if result is not None:
+                        with open(str(result), 'r', encoding='utf-8') as f:
+                            content = f.read().strip()
+                            content = re.sub(r"---(.*?)---", "", content, flags=re.DOTALL).strip()
+                            if content:
+                                match = re.search(r"models--(.*?)\\", result)
+                                if match:
+                                    self.models_filtered.append(match.group(1).replace("--", "/"))
+                                if len(content) < threshold:
+                                    count += 1
 
                 if len(self.models_filtered) == num:
                     print("RATE LIMIT")
@@ -196,7 +197,7 @@ class Models:
                     print("Hugging Face cache has been cleared.")
                 else:
                     print("Hugging Face cache directory does not exist.")
-                time.sleep(3)
+                time.sleep(10)
         return count
 
     def write_model_non_empty_cards(self):
@@ -219,10 +220,8 @@ class Models:
 
 if __name__ == "__main__":
     md = Models()
-    cache_dir = os.path.expanduser("~/.cache/huggingface/hub")
-    if os.path.exists(cache_dir):
-        shutil.rmtree(cache_dir)
-    count = md.filter_empty_card_from_file()
-    md.write_model_non_empty_cards()
-    print(count, "models have a non empty model card with less than 100 characters")
-    # print(sum(1 for line in open('model_with_card.json')))
+    # count = md.filter_empty_card_from_file()
+    # md.write_model_non_empty_cards()
+    # print(count, "models have a non empty model card with less than 100 characters")
+    print(sum(1 for line in open('model_with_card.json')))
+    print(sum(1 for line in open('model_with_non_empty_card.json')))
