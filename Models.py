@@ -10,7 +10,7 @@ import time
 import json
 import shutil
 import re
-
+import itertools
 
 class Models:
     """
@@ -49,12 +49,11 @@ class Models:
     def read_file(self, start_line, end_line, name):
         result = []
         with open(name, 'r') as file:
-            for line_num, line in enumerate(file, start=start_line):
-                if start_line <= line_num <= end_line:
-                    data = json.loads(line.strip())
-                    result.append(data)
-                elif line_num > end_line:
-                    return result
+
+            lines = itertools.islice(file, start_line, end_line)
+            for line in lines:
+                data = json.loads(line.strip())
+                result.append(data)
             return result
 
     def get_models_from_time(self, limit):
@@ -92,7 +91,7 @@ class Models:
             model for model in self.models
             if start_date <= parser.isoparse(str(model.createdAt)) <= end_date
         ]
-        self.models = filtered_models
+        self.model_by_time = filtered_models
         print("%s models is within the specified dates" % len(self.models))
 
     def fetch_model_info(self, model_id):
@@ -168,12 +167,12 @@ class Models:
         page = 0
         page_size = 1000
         count = 0
-        while page < 612:
+        while page < 812:
             with ThreadPoolExecutor(max_workers=100) as executor:
                 start_line = page * page_size
                 end_line = (page + 1) * page_size
                 page += 1
-                models = self.read_file(start_line, end_line, "model_with_card.json")
+                models = self.read_file(start_line, end_line, "model_filtered_time.json")
                 results = list(executor.map(self.fetch_model_info, models))
                 num = len(self.models_filtered)
                 for result in results:
@@ -197,7 +196,7 @@ class Models:
                     print("Hugging Face cache has been cleared.")
                 else:
                     print("Hugging Face cache directory does not exist.")
-                time.sleep(10)
+                time.sleep(5)
         return count
 
     def write_model_non_empty_cards(self):
@@ -220,8 +219,9 @@ class Models:
 
 if __name__ == "__main__":
     md = Models()
-    # count = md.filter_empty_card_from_file()
-    # md.write_model_non_empty_cards()
-    # print(count, "models have a non empty model card with less than 100 characters")
-    print(sum(1 for line in open('model_with_card.json')))
-    print(sum(1 for line in open('model_with_non_empty_card.json')))
+    # print(sum(1 for line in open('model_filtered_time.json')))
+    count = md.filter_empty_card_from_file()
+    md.write_model_non_empty_cards()
+    print(count, "models have a non empty model card with less than 100 characters")
+    # print(sum(1 for line in open('model_with_card.json')))
+    # print(sum(1 for line in open('model_with_non_empty_card.json')))

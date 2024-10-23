@@ -8,7 +8,9 @@ from huggingface_hub.utils import disable_progress_bars
 import random
 import time
 import json
-import requests
+import itertools
+import shutil
+import re
 
 
 class Datasets:
@@ -27,39 +29,44 @@ class Datasets:
         warnings.filterwarnings("ignore", message="Invalid dataset-index")
         disable_progress_bars()
 
-    def get_datasets(self, limit=1000000, full=True):
+    def get_datasets(self, full=True):
         """
         Pulls datasets, with a specified limit amount of datasets.
         full=True makes filter by date possible.
         """
-        self.datasets = list(self.api.list_datasets(sort="downloads", direction="-1", full=full))
+        self.datasets = list(self.api.list_datasets(sort="createdAt", direction=-1, full=full))
         print(f"Fetched {len(self.datasets)} datasets")
 
     def write_datasets(self):
         datasets = []
         for dataset in self.datasets:
-            
-            created_at = dataset.created_at
-            if isinstance(created_at, datetime):
-                created_at = created_at.strftime("%Y-%m-%dT%H:%M:%S.000Z")
-            datasets.append([dataset.id, created_at])
-            
-        print(datasets)
-        
+            datasets.append([dataset.id, dataset.createdAt])
         self.datasets = datasets
         with open('dataset_names.json', 'w') as file:
             for dataset in datasets:
                 file.write(json.dumps(dataset) + '\n')
 
-    def read_file(self, start_line, end_line):
+    def read_file(self, start_line, end_line, name):
         result = []
-        with open("dataset_names.json", 'r') as file:
-            for line_num, line in enumerate(file, start=1):
-                if start_line <= line_num <= end_line:
-                    data = json.loads(line.strip())
-                    result.append(list(data))
-                elif line_num > end_line:
-                    return result
+        with open(name, 'r') as file:
+            lines = itertools.islice(file, start_line - 1, end_line)
+            for line in lines:
+                data = json.loads(line.strip())
+                result.append(data)
+            return result
+
+    def filter_date(self):
+        """
+        filter the datasets by date
+        """
+        start_date = datetime(2022, 9, 1, tzinfo=timezone.utc)
+        end_date = datetime(2024, 8, 31, tzinfo=timezone.utc)
+        filtered_datasets = [
+            dataset for dataset in self.datasets
+            if start_date <= parser.isoparse(str(dataset.createdAt)) <= end_date
+        ]
+        self.datasets_by_time = filtered_datasets
+        print("%s dataset is within the specified dates" % len(self.datasets))
 
     def get_datasets_from_time(self, limit):
         start_date = datetime(2022, 9, 1, tzinfo=timezone.utc)
@@ -71,6 +78,10 @@ class Datasets:
             end_line = (page + 1) * page_size
             page += 1
             datasets = self.read_file(start_line, end_line)
+            print("page:", page)
+            # print("current date:", parser.isoparse(datasets[0][1]))
+            # print(start_date <= parser.isoparse(datasets[0][1]) <= end_date)
+            # print(start_date >= parser.isoparse(datasets[0][1]))
             if start_date <= parser.isoparse(datasets[0][1]) <= end_date:
                 for dataset in datasets:
                     self.datasets_by_time.append(dataset)
@@ -80,69 +91,24 @@ class Datasets:
     def write_time_filtered_datasets(self):
         datasets = []
         for dataset in self.datasets_by_time:
-            datasets.append(dataset[0])
+            datasets.append(dataset.id)
         self.datasets_by_time = datasets
-        
+
         with open('dataset_filtered_time.txt', 'w') as file:
             for dataset in datasets:
                 file.write(dataset + '\n')
 
-    def filter_empty(self):
-        """
-        Filter datasets with empty data cards.
-        """
-        with ThreadPoolExecutor(max_workers=100) as executor:
-            percents = 10
-            for i in range(0, percents):
-                datasets = self.datasets[
-                           round(len(self.datasets) * i / percents):round(len(self.datasets * (i + 1)) / percents)]
-                dataset_ids = [dataset.id for dataset in datasets]
-                results = list(executor.map(self.fetch_dataset_info, dataset_ids))
-                datasets_filtered = [dataset for dataset, result in zip(datasets, results) if result is not None]
-                for dataset in datasets_filtered:
-                    self.datasets_filtered.append(dataset.id)
-                print(len(datasets_filtered))
-                print(f"{(i + 1) * 10}% done")
-                cache_dir = os.path.expanduser("~/.cache/huggingface/hub")
-                if os.path.exists(cache_dir):
-                    print("Hugging Face cache has been cleared.")
-                else:
-                    print("Hugging Face cache directory does not exist.")
-                time.sleep(3)
-
-        print(f"{len(self.datasets_filtered)} datasets have data cards")
-        
-    def select(self, max):
-        datasets = []
-        # Open the text file in read mode to load datasets
-        with open('dataset_filtered_time.txt', 'r') as file:
-            for line in file:
-                line = line.strip()  # Remove any leading/trailing whitespace
-                if line:  # Check if the line is not empty
-                    datasets.append(line)
-        # Check if there are enough datasets to select from
-        if len(datasets) < max:
-            print(f"Error: Not enough datasets available. Found {len(datasets)} datasets.")
-            return
-        # randomly sample
-        selected = random.sample(datasets, max)
-
-        print(f"Finished selecting {max} datasets")
-        
-        filtered_models = []
-        
-        for i in selected:
-            if self.check_dataset_card(i):
-                filtered_models.append(i)
-                
-        with open('selected_datasets.txt', 'w') as file:
-            for dataset in filtered_models:
-                file.write(dataset + '\n')
+    def fetch_dataset_info(self, id):
+        try:
+            result = self.api.hf_hub_download(id, 'README.md', repo_type='dataset')
+            return result
+        except Exception as error:
+            return None
 
     def select_400(self):
-        
+
         datasets = []
-    
+
         # Open the text file in read mode to load datasets
         with open('selected_datasets.txt', 'r') as file:
             for line in file:
@@ -154,7 +120,7 @@ class Datasets:
         if len(datasets) < 400:
             print(f"Error: Not enough datasets available. Found {len(datasets)} datasets.")
             return
-        
+
         selected = random.sample(datasets, 400)
 
         # Write the selected datasets to the output file
@@ -163,37 +129,72 @@ class Datasets:
                 file.write(json.dumps(i) + "\n")  # Write each dataset as a JSON string
 
         print("Finished selecting 400 datasets")
-        
-    def check_dataset_card(self, dataset_name):
-        # Base URL for the Hugging Face API to get model details
-        url = f"https://huggingface.co/api/datasets/{dataset_name}"
-    
-        try:
-            # Send a request to the Hugging Face API
-            response = requests.get(url)
-            response.raise_for_status()  # Raise an error for bad responses
-            dataset_info = response.json()
 
-            # Check if the dataset has a card by looking for a "cardData" or similar key
-            return dataset_info.get("cardData") is not None
+    def filter_empty_card_from_file(self, threshold=100):
+        """
+        filter the models with empty datacard out
+        """
+        page = 0
+        page_size = 1000
+        count = 0
+        while page < 190:
+            with ThreadPoolExecutor(max_workers=100) as executor:
+                start_line = page * page_size
+                end_line = (page + 1) * page_size
+                page += 1
+                models = self.read_file(start_line, end_line, "dataset_filtered_time.json")
+                results = list(executor.map(self.fetch_dataset_info, models))
+                num = len(self.datasets_filtered)
+                for result in results:
+                    if result is not None:
+                        with open(str(result), 'r', encoding='utf-8') as f:
+                            content = f.read().strip()
+                            content = re.sub(r"---(.*?)---", "", content, flags=re.DOTALL).strip()
+                            if content:
+                                match = re.search(r"models--(.*?)\\", result)
+                                if match:
+                                    self.datasets_filtered.append(match.group(1).replace("--", "/"))
+                                if len(content) < threshold:
+                                    count += 1
 
-        except requests.exceptions.RequestException as e:
-            print(f"Error fetching dataset data: {e}")
-            return False
+                if len(self.datasets_filtered) == num:
+                    print("RATE LIMIT")
+                cache_dir = os.path.expanduser("~/.cache/huggingface/hub")
+                if os.path.exists(cache_dir):
+                    shutil.rmtree(cache_dir)
+                    print("page:", page)
+                    print("Hugging Face cache has been cleared.")
+                else:
+                    print("Hugging Face cache directory does not exist.")
+                time.sleep(5)
+        return count
+
+    def write_dataset_non_empty_cards(self):
+        with open('dataset_with_non_empty_card.json', 'w') as file:
+            for dataset in self.datasets_filtered:
+                file.write(json.dumps(dataset) + '\n')
 
 
 if __name__ == "__main__":
-    
-    #229325
-    
+    # 229325
+
     ds = Datasets()
-    
+    count = ds.filter_empty_card_from_file()
+    ds.write_dataset_non_empty_cards()
+    print(count, "models have a non empty model card with less than 100 characters")
+    # ds.get_datasets()
+    # ds.write_datasets()
+    # ds.get_datasets()
+    # ds.filter_date()
+    # ds.write_time_filtered_datasets()
+    # print(sum(1 for line in open('dataset_filtered_time.txt')))
+    # print(open("dataset_names.json"))
     # ds.get_datasets(limit=1000, full=True)
     # ds.write_datasets()
-    
-    ds.get_datasets_from_time(9999999)
-    ds.write_time_filtered_datasets()
-    
-    ds.select(1000)
-    
-    ds.select_400()
+
+    # ds.get_datasets_from_time(9999999)
+    # ds.write_time_filtered_datasets()
+    #
+    # ds.select(1000)
+    #
+    # ds.select_400()
