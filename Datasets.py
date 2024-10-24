@@ -27,6 +27,7 @@ class Datasets:
         self.datasets_by_time = []
         self.datasets_filtered = []
         warnings.filterwarnings("ignore", message="Invalid dataset-index")
+        warnings.filterwarnings("ignore", message=".*HF_HUB_DISABLE_SYMLINKS_WARNING.*")
         disable_progress_bars()
 
     def get_datasets(self, full=True):
@@ -49,7 +50,7 @@ class Datasets:
     def read_file(self, start_line, end_line, name):
         result = []
         with open(name, 'r') as file:
-            lines = itertools.islice(file, start_line - 1, end_line)
+            lines = itertools.islice(file, start_line, end_line + 1)
             for line in lines:
                 data = json.loads(line.strip())
                 result.append(data)
@@ -130,11 +131,10 @@ class Datasets:
 
         print("Finished selecting 400 datasets")
 
-    def filter_empty_card_from_file(self, threshold=100):
+    def filter_empty_card_from_file(self, threshold=100, page=0):
         """
         filter the models with empty datacard out
         """
-        page = 0
         page_size = 1000
         count = 0
         while page < 190:
@@ -145,15 +145,17 @@ class Datasets:
                 models = self.read_file(start_line, end_line, "dataset_filtered_time.json")
                 results = list(executor.map(self.fetch_dataset_info, models))
                 num = len(self.datasets_filtered)
+                current=[]
                 for result in results:
                     if result is not None:
                         with open(str(result), 'r', encoding='utf-8') as f:
                             content = f.read().strip()
                             content = re.sub(r"---(.*?)---", "", content, flags=re.DOTALL).strip()
                             if content:
-                                match = re.search(r"models--(.*?)\\", result)
+                                match = re.search(r"datasets--(.*?)\\", result)
                                 if match:
                                     self.datasets_filtered.append(match.group(1).replace("--", "/"))
+                                    current.append(match.group(1).replace("--", "/"))
                                 if len(content) < threshold:
                                     count += 1
 
@@ -163,11 +165,18 @@ class Datasets:
                 if os.path.exists(cache_dir):
                     shutil.rmtree(cache_dir)
                     print("page:", page)
+                    print(len(self.datasets_filtered))
                     print("Hugging Face cache has been cleared.")
+                    self.append("dataset_with_non_empty_card.json",current)
                 else:
                     print("Hugging Face cache directory does not exist.")
                 time.sleep(5)
         return count
+
+    def append(self, name, content):
+        with open(name, 'a') as file:
+            for dataset in content:
+                file.write(json.dumps(dataset) + '\n')
 
     def write_dataset_non_empty_cards(self):
         with open('dataset_with_non_empty_card.json', 'w') as file:
@@ -179,8 +188,8 @@ if __name__ == "__main__":
     # 229325
 
     ds = Datasets()
-    count = ds.filter_empty_card_from_file()
-    ds.write_dataset_non_empty_cards()
+    count = ds.filter_empty_card_from_file(page=163)
+
     print(count, "models have a non empty model card with less than 100 characters")
     # ds.get_datasets()
     # ds.write_datasets()
