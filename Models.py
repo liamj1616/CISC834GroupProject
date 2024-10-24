@@ -12,6 +12,7 @@ import shutil
 import re
 import itertools
 
+
 class Models:
     """
     this class pulls the models from huggingface API and processes them
@@ -49,7 +50,6 @@ class Models:
     def read_file(self, start_line, end_line, name):
         result = []
         with open(name, 'r') as file:
-
             lines = itertools.islice(file, start_line, end_line)
             for line in lines:
                 data = json.loads(line.strip())
@@ -160,11 +160,10 @@ class Models:
                     print("Hugging Face cache directory does not exist.")
                 time.sleep(3)
 
-    def filter_empty_card_from_file(self, threshold=100):
+    def filter_empty_card_from_file(self, threshold=100, page=0):
         """
         filter the models with empty datacard out
         """
-        page = 0
         page_size = 1000
         count = 0
         while page < 812:
@@ -175,17 +174,22 @@ class Models:
                 models = self.read_file(start_line, end_line, "model_filtered_time.json")
                 results = list(executor.map(self.fetch_model_info, models))
                 num = len(self.models_filtered)
+                current = []
                 for result in results:
                     if result is not None:
                         with open(str(result), 'r', encoding='utf-8') as f:
-                            content = f.read().strip()
-                            content = re.sub(r"---(.*?)---", "", content, flags=re.DOTALL).strip()
-                            if content:
-                                match = re.search(r"models--(.*?)\\", result)
-                                if match:
-                                    self.models_filtered.append(match.group(1).replace("--", "/"))
-                                if len(content) < threshold:
-                                    count += 1
+                            try:
+                                content = f.read().strip()
+                                content = re.sub(r"---(.*?)---", "", content, flags=re.DOTALL).strip()
+                                if content:
+                                    match = re.search(r"models--(.*?)\\", result)
+                                    if match:
+                                        self.models_filtered.append(match.group(1).replace("--", "/"))
+                                        current.append(match.group(1).replace("--", "/"))
+                                    if len(content) < threshold:
+                                        count += 1
+                            except Exception as error:
+                                print(error)
 
                 if len(self.models_filtered) == num:
                     print("RATE LIMIT")
@@ -194,6 +198,7 @@ class Models:
                     shutil.rmtree(cache_dir)
                     print("page:", page)
                     print("Hugging Face cache has been cleared.")
+                    self.append("model_with_non_empty_card.json", current)
                 else:
                     print("Hugging Face cache directory does not exist.")
                 time.sleep(5)
@@ -209,6 +214,11 @@ class Models:
             for model in self.models_filtered:
                 file.write(json.dumps(model) + '\n')
 
+    def append(self, name, content):
+        with open(name, 'a') as file:
+            for model in content:
+                file.write(json.dumps(model) + '\n')
+
     def select_400(self):
         with open('400.txt', 'w') as file:
             random.shuffle(self.models_filtered)
@@ -220,8 +230,7 @@ class Models:
 if __name__ == "__main__":
     md = Models()
     # print(sum(1 for line in open('model_filtered_time.json')))
-    count = md.filter_empty_card_from_file()
-    md.write_model_non_empty_cards()
+    count = md.filter_empty_card_from_file(page=166)
     print(count, "models have a non empty model card with less than 100 characters")
     # print(sum(1 for line in open('model_with_card.json')))
     # print(sum(1 for line in open('model_with_non_empty_card.json')))
